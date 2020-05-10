@@ -4,6 +4,7 @@ import argparse
 import getpass
 
 from source.mseven6 import MSEven6
+from parser.binxml import ResultSet
 
 def main():
     parser = argparse.ArgumentParser()
@@ -20,7 +21,7 @@ def main():
     source.connect()
 
     for event in source.query():
-        print(event)
+        print(ResultSet(event).xml())
 
 if __name__ == '__main__':
     main()
