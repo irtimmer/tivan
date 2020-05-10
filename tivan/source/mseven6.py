@@ -12,20 +12,31 @@ class Result:
         self._handle = handle
 
     def __iter__(self):
+        self._resp = None
         return self
 
     def __next__(self):
-        req = even6.EvtRpcQueryNext()
-        req['LogQuery'] = self._handle
-        req['NumRequestedRecords'] = 1
-        req['TimeOutEnd'] = 1000
-        req['Flags'] = 0
-        resp = self._conn.dce.request(req)
+        if self._resp != None and self._resp['NumActualRecords'] == 0:
+            return None
 
-        if resp['NumActualRecords'] > 0:
-            offset = resp['EventDataIndices'][0]['Data']
-            size = resp['EventDataSizes'][0]['Data']
-            return b''.join(resp['ResultBuffer'][offset:offset + size])
+        if self._resp == None or self._index == self._resp['NumActualRecords']:
+            req = even6.EvtRpcQueryNext()
+            req['LogQuery'] = self._handle
+            req['NumRequestedRecords'] = 20
+            req['TimeOutEnd'] = 1000
+            req['Flags'] = 0
+            self._resp = self._conn.dce.request(req)
+
+            if self._resp['NumActualRecords'] == 0:
+                return None
+            else:
+                self._index = 0
+
+        offset = self._resp['EventDataIndices'][self._index]['Data']
+        size = self._resp['EventDataSizes'][self._index]['Data']
+        self._index += 1
+
+        return b''.join(self._resp['ResultBuffer'][offset:offset + size])
 
 class MSEven6:
     def __init__(self, machine, username, password, domain):
