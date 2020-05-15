@@ -1,27 +1,17 @@
 # SPDX-License-Identifier: GPL-2.0+
 
-import argparse
-import getpass
+import click
+import os
+import importlib
+import pkgutil
 
-from source.mseven6 import MSEven6
-from parser.binxml import ResultSet
+class CommandCLI(click.MultiCommand):
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--host', type=str, required=True, help='host to connect to')
-    parser.add_argument('--username', type=str, required=True, help='username for login')
-    parser.add_argument('--password', type=str, required=False, help='password for login')
-    parser.add_argument('--domain', type=str, default='WORKSTATION', required=False, help='domain for login')
+    def list_commands(self, ctx):
+        return map(lambda x: x[1], pkgutil.iter_modules([os.path.dirname(__file__) + '/commands']))
 
-    args = parser.parse_args()
-    if not args.password:
-        args.password = getpass.getpass()
-
-    source = MSEven6(args.host, args.username, args.password, args.domain)
-    source.connect()
-
-    for event in source.query():
-        print(ResultSet(event).xml())
+    def get_command(self, ctx, name):
+        return importlib.import_module('commands.%s' % name).cli
 
 if __name__ == '__main__':
-    main()
+    CommandCLI(help='Tivan the Log Collector')()
