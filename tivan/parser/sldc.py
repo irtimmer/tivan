@@ -41,11 +41,10 @@ class SLDC:
                     self.add_byte(ord(stream.read(bytes, 1)))
                     continue
                 elif ones < 8:
-                    #TODO support ones > 4
+                    cnt_field = stream.read(BitStream, ones + 1 if ones < 4 else 11 - ones)
                     if ones > 4:
-                        raise ValueError("Can't parse SLDC, unsupported copy count: %d" % (ones))
+                        cnt_field += (ones - 4) << (12 - ones)
 
-                    cnt_field = stream.read(BitStream, ones + 1 if ones < 4 else 7)
                     cnt = int(str(cnt_field), 2) + (2 << ones)
                     loc = int(str(stream.read(BitStream, 10)), 2)
 
