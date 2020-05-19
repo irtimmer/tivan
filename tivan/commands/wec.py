@@ -10,6 +10,7 @@ from flask import request, make_response
 from lxml.builder import ElementMaker
 from lxml import etree
 
+from parser.sldc import SLDC
 from helpers.wsman import Envelope, NS_SOAP_ENVELOPE, NS_ADDRESSING, NS_MS_WSMAN, NS_WSMAN, ADDRESS_ANONYMOUS
 
 NS_ENUMERATION = 'http://schemas.xmlsoap.org/ws/2004/09/enumeration'
@@ -27,6 +28,7 @@ RESOURCE_EVENTLOG = 'http://schemas.microsoft.com/wbem/wsman/1/windows/EventLog'
 ACTION_ENUMERATE = 'http://schemas.xmlsoap.org/ws/2004/09/enumeration/Enumerate'
 ACTION_ENUMERATE_RESPONSE = 'http://schemas.xmlsoap.org/ws/2004/09/enumeration/EnumerateResponse'
 ACTION_SUBSCRIBE = 'http://schemas.xmlsoap.org/ws/2004/08/eventing/Subscribe'
+ACTION_ACK = 'http://schemas.dmtf.org/wbem/wsman/1/wsman/Ack'
 ACTION_END = 'http://schemas.microsoft.com/wbem/wsman/1/wsman/End'
 
 MODE_EVENTS = 'http://schemas.dmtf.org/wbem/wsman/1/wsman/Events'
@@ -34,6 +36,10 @@ MODE_EVENTS = 'http://schemas.dmtf.org/wbem/wsman/1/wsman/Events'
 AUTH_PROFILE_MUTUAL = 'http://schemas.dmtf.org/wbem/wsman/1/wsman/secprofile/https/mutual'
 
 FILTER_DIALECT_EVENTQUERY = 'http://schemas.microsoft.com/win/2004/08/events/eventquery'
+
+def handle_sldc():
+    if request.content_encoding == 'SLDC':
+        request.data = SLDC().decode(request.data)
 
 class WEC:
 
@@ -141,6 +147,19 @@ class WEC:
 
         return (envelope, message_id, subscription)
 
+    def subscription(self, subscription, id):
+        req = Envelope(request.data.decode('UTF-16'))
+        ret = Envelope()
+        req.action = ACTION_ACK
+        req.to = ADDRESS_ANONYMOUS
+        ret.reply(req)
+
+        print(req.tostring('unicode'))
+
+        resp = make_response('', 200)
+        resp.headers['Content-Type'] = 'application/soap+xml;charset=UTF-16'
+        return resp
+
     def wec(self):
         req = Envelope(request.data.decode('UTF-16'))
         action = req.action
@@ -209,10 +228,16 @@ def cli(host, port, cert, key, config):
     }, cfg.sections()))
 
     app = Flask(__name__)
+    app.before_request(handle_sldc)
+
     w = WEC(subscriptions)
 
     @app.route("/wsman/SubscriptionManager/WEC", methods=['POST'])
     def wec():
         return w.wec()
+
+    @app.route("/wsman/subscriptions/<string:subscription>/<int:id>", methods=['POST'])
+    def subscription(subscription, id):
+        return w.subscription(subscription, id)
 
     app.run(host=host, port=port, ssl_context=(cert, key))
