@@ -52,11 +52,11 @@ class MSEven6:
         self.dce.connect()
         self.dce.bind(even6.MSRPC_UUID_EVEN6)
 
-    def query(self):
+    def query(self, path, query):
         req = even6.EvtRpcRegisterLogQuery()
-        req['Path'] = 'Security\x00'
-        req['Query'] = '*\x00'
-        req['Flags'] = even6.EvtQueryChannelName | even6.EvtReadNewestToOldest
+        req['Path'] = path + '\x00'
+        req['Query'] = query + '\x00'
+        req['Flags'] = even6.EvtQueryChannelName | even6.EvtReadOldestToNewest
 
         resp = self.dce.request(req)
         handle = resp['Handle']

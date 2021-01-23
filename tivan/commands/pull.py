@@ -11,12 +11,14 @@ from parser.binxml import ResultSet
 @click.option('--username', help='Username for login', required=True)
 @click.option('--password', help='Password for login')
 @click.option('--domain', default='WORKSTATION', help='Domain for login')
-def cli(host, username, password, domain):
+@click.option('--path', default='security', help='Path to eventlog')
+@click.option('--query', default='*', help='Query for filtering events')
+def cli(host, username, password, domain, path, query):
     if not password:
         password = getpass.getpass()
 
     source = MSEven6(host, username, password, domain)
     source.connect()
 
-    for event in source.query():
+    for event in source.query(path, query):
         print(ResultSet(event).xml())
